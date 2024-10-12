@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Parkour Civilization Language Translator</title>
+
+        <meta charset="utf-8">
+        <meta property="og:title" content="Parkour Civilization Language Translator">
+
+        <script type="module">
+            const sourceLanguage = document.getElementById('source-language')
+            const translatedIntoLabel = document.getElementById('translated-into-label')
+
+            const input = document.getElementById('input')
+            const output = document.getElementById('output')
+
+            const copyButton = document.getElementById('copy-button')
+            const translateButton = document.getElementById('translate-button')
+
+            const PARKOUR_SPEAK_REGEX = /^(_|\[|\]|M|\s)*$/m
+
+            function stringToParkourSpeak(string) {
+                return [...new TextEncoder().encode(string)].map(
+                    (byte) => byte.toString(2)
+                        .padStart(8, '0')
+                        .replaceAll('0', '_')
+                        .replaceAll('1', '[]')
+                ).join('M')
+            }
+
+            function parkourSpeakToString(parkourSpeak) {
+                return new TextDecoder().decode(
+                    new Uint8Array(
+                        parkourSpeak
+                            .replace(/\s/g, '')
+                            .split('M')
+                            .map(
+                                (stringifiedByte) => stringifiedByte
+                                    .replaceAll('_', '0')
+                                    .replaceAll('[]', '1')
+                                    .split('')
+                                    .reduce((acc, bit, index) => acc + (Number(bit) * 2 ** (7 - index)), 0)
+                            )
+                    )
+                )
+            }
+
+            sourceLanguage.onchange = (e) => {
+                translatedIntoLabel.textContent =
+                    `translated into: ${e.target.value === 'parkour' ? 'everything else' : 'parkour speak'}`
+
+                output.value = ''
+            }
+
+            copyButton.onclick = async () => {
+                if (!output.value) return
+
+                try {
+                    await navigator.clipboard.writeText(output.value)
+                } catch (e) {
+                    console.error(e)
+                    alert('An error has occurred when trying to write to clipboard')
+                }
+            }
+
+            translateButton.onclick = () => {
+                if (!input.value) return
+
+                if (sourceLanguage.value === 'parkour' && !input.value.match(PARKOUR_SPEAK_REGEX)) {
+                    alert('Input is not valid Parkour Speak!')
+                    return
+                }
+
+                output.value = sourceLanguage.value === 'parkour'
+                    ? parkourSpeakToString(input.value)
+                    : stringToParkourSpeak(input.value)
+            }
+        </script>
+
+        <style>
+            * {
+                font-family: monospace;
+                color: lightgray;
+            }
+
+            html {
+                height: 100%;
+                background-color: #202020;
+            }
+
+            body {
+                justify-content: center;
+                display: flex;
+                flex-direction: column;
+                padding: 24px;
+                margin: 0;
+                gap: 16px;
+            }
+
+            textarea {
+                color: white;
+                background-color: #101010;
+                resize: none;
+            }
+
+            select {
+                color: white;
+                background-color: #101010;
+            }
+
+            button {
+                background-color: #303030;
+            }
+
+            .container,
+            .container-row {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .container-row {
+                flex-direction: row;
+            }
+
+            .container > .info-and-copy-button-container {
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .container > textarea {
+                flex: 1;
+            }
+
+            .container > .language-selector,
+            #translated-into-label {
+                margin: 8px 0;
+                font-size: 16px;
+            }
+
+            #copy {
+                height: 50%;
+            }
+
+            .header {
+                text-align: center;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1 class="header">Parkour Civilization Language Translator</h1>
+
+        <div class="container">
+            <h2>input:</h2>
+
+            <div class="language-selector">
+                <span>source language: </span>
+                <select required id="source-language">
+                    <option selected value="normal">everything else</option>
+                    <option value="parkour">parkour speak</option>
+                </select>
+            </div>
+
+            <textarea id="input" rows="10"></textarea>
+        </div>
+
+        <div class="container">
+            <h2>output:</h2>
+            
+            <div class="info-and-copy-button-container container-row">
+                <span id="translated-into-label">translated into: parkour</span>
+                <button id="copy-button">copy</button>
+            </div>
+
+            <textarea disabled id="output" rows="10"></textarea>
+        </div>
+
+        <button id="translate-button">Translate!</button>
+    </body>
+</html>
